@@ -1,0 +1,77 @@
+.data
+real-x:      .space 4096    # 1024 elements × 4 bytes real
+imag-x:      .space 4096    # 1024 elements × 4 bytes imag
+.text
+.globl _start
+_start:
+
+    la s0 real-x
+    jal BitRevFunc
+
+    la s0 imag-x
+    jal BitRevFunc
+
+    j end
+
+BitRevFunc
+    addi sp, sp, -4
+    sw ra, 0(sp) 
+
+    li t0 0            # i=0
+    li s1 1024         # 1024 elements
+    li t2 4             # Load 4
+
+main:
+    bge t0 s1 BRend       # While i<512....................
+
+    # compute offset = i*4
+    mul t3 t0 t2        # x=i*4
+    add t3 s0 t3        # I=s0+x (input adr), Overwrite t3
+
+    # bit-reverse t0 → result in t6
+    mv a0 t0            # Move i to a0, use a0 in func and t0 as result 
+    jal BitRev       # a1 = BitRev(i)
+    mv t6 a1            # Move BitRev(i) to t6
+
+    bge t0 t6 next
+    # compute rev_offset = rev(i) * 4
+    mul s2 t6 t2        # Compute BitR evadr offset y=Result*4
+    add s2 s0 s2        # I=s0+y (store adr), Overwrite s2
+
+    lw t4 0(t3)         # Load input[i]
+    lw t5 0(s2)         # Load input[BitRev(i)]
+    sw t5 0(t3)         # Store Result at adr of input[i]
+    sw t4 0(s2)         # Store input[i] at adr of BitRev(i) aka Result
+
+next:
+    addi t0, t0, 1      # i++
+    j main
+    
+
+BitRev:
+    # a0 = input[i] now
+    # returns a1 = bit-reversed iput[i]
+    li    t1 0          # Result
+    li    s4 10         # 10-bit loop -> j
+
+BRLoop:
+    slli  t1 t1 1       # Shift Result 1 bit left
+    andi  t5 a0 1       # Extract LSB from input[i]
+    or    t1 t1 t5      # Add LSB to Result
+    srli  a0 a0 1       # Shift input[i] 1 bit right (Decaying)
+    addi  s4 s4 -1      # Counter decremnet -> j--
+    bnez  s4 BRLoop     # while (j!=0)
+
+    # Apply 10-bit mask (0x3FF)=1023
+    li a1, 0x3FF         # Load 1023 in a1 
+    and a1, t1, a1       # a1 = Result & 0x3FF (Disregard overflow bits)
+    ret                  # return
+
+BRend:
+    ret
+
+end:
+    # Termination (idk what dis is but dis is also imp)
+    li a7, 93            # Exit syscall number
+    li a0, 0             # Exit code 0
+    ecall                # End code with no errors

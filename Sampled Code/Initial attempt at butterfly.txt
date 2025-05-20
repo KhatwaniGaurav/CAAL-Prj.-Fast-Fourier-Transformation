@@ -1,0 +1,56 @@
+#Iterative method for calculating X[8] using butterfly functions in Fast Fourier Transformation
+
+.data
+Data: .float 1,2,3,4,5,6,7,8
+
+.text
+
+main:
+la a0,Data
+flw fs0,0(a0)   #fs0 = 1
+flw fs1,4(a0)   #fs1 = 2
+flw fs2,8(a0)   #fs2 = 3
+flw fs3,12(a0)  #fs3 = 4
+flw fs4,16(a0)  #fs4 = 5
+flw fs5,20(a0)  #fs5 = 6
+flw fs6,24(a0)  #fs6 = 7
+flw fs7,28(a0)  #fs7 = 8
+
+#Suppose the array has already has had bit reversal algorithm implemented in each iteration
+
+#Following line is our supposition that thetwiddle factor for values is 1 
+fadd.s fa1,fa1,fs0 #fa1=0  #Twiddle factor
+
+# First_Breakup: Breaking of our array into half arrays of 4 data points one of X[k]even and one of X[k]odd
+# Second_Breakup: Further breaking of our array into half of 2 values, now we will implement 2 point dft.
+BackTracking:
+
+Lowest_Level_Merge:
+FirstMerge:
+fmadd.s ft0,fs0,fa1,fs1   #ft0 = fs0 + fa1*fs1    //ft0 = 1 + 1*2 = 3
+
+SecondMerge:
+fmsub.s ft1,fs2,fa1,fs3   #ft0 = fs2 - fa1*fs3    //ft1 = 3 - 1*4 = -1
+
+ThirdMerge:
+fmadd.s ft2,fs4,fa1,fs5   #ft2 = 5 + 1*6 = 11
+
+FouthMerge:
+fmsub.s ft3,fs6,fa1,fs7   #ft3 = 7 - 1*8 = -1
+
+Second_Lowest_Level_Merge:
+FirstMerge2:
+fmadd.s ft0,ft0,fa1,ft1   #ft0 = 3 + 1*(-1) = 2
+
+SecondMerge2:
+fmsub.s ft2,ft2,fa1,ft3   #ft2 = 11 - 1*(-1) = 12
+
+Highest_Level_Merge:
+FirstMerge3:
+fmadd.s ft0,ft0,fa1,ft2   #ft0 = 2 + 1*12 = 14
+
+
+exit:
+
+
+
